@@ -1,0 +1,86 @@
+{
+  "name": "keelwave",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for keelwave — observability and alerting for AI agents.",
+  "author": "keelwave <developers@keelwave.com>",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vercel-ai": {
+      "types": "./dist/adapters/vercel-ai.d.ts",
+      "import": "./dist/adapters/vercel-ai.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "keelwave",
+    "observability",
+    "ai",
+    "agents",
+    "llm",
+    "tracing",
+    "monitoring",
+    "sdk",
+    "typescript",
+    "openai",
+    "anthropic",
+    "vercel-ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keelwave/keelwave-js.git"
+  },
+  "homepage": "https://github.com/keelwave/keelwave-js#readme",
+  "bugs": {
+    "url": "https://github.com/keelwave/keelwave-js/issues"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "prepack": "pnpm run clean && pnpm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"examples/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"examples/**/*.ts\" --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "peerDependencies": {
+    "ai": "^4.3.19"
+  },
+  "peerDependenciesMeta": {
+    "ai": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "ai": "^4.3.19",
+    "@tanstack/eslint-config": "^0.4.0",
+    "@types/node": "^24.0.1",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "pnpm@10.12.1"
+}
