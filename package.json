@@ -1,7 +1,7 @@
 {
   "name": "keelwave",
   "version": "0.1.0",
-  "description": "TypeScript SDK for keelwave — observability and alerting for AI agents.",
+  "description": "JavaScript and TypeScript SDK for keelwave — observability and alerting for AI agents.",
   "author": "keelwave <developers@keelwave.com>",
   "license": "MIT",
   "type": "module",
@@ -32,7 +32,9 @@
     "tracing",
     "monitoring",
     "sdk",
+    "javascript",
     "typescript",
+    "nodejs",
     "openai",
     "anthropic",
     "vercel-ai"

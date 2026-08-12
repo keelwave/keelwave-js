@@ -1,8 +1,8 @@
-# keelwave — TypeScript SDK
+# keelwave — JavaScript / TypeScript SDK
 
-Zero-friction tracing for AI agents in TypeScript / Node.
+Zero-friction tracing for AI agents on Node.
 
-The keelwave TypeScript SDK instruments your agent code and streams agent
+The keelwave SDK instruments your agent code and streams agent
 runs, decision steps, tool calls, loop-detection fingerprints, token/cost
 data, and model traces to a [keelwave](https://github.com/keelwave/keelwave)
 server. An API key is the only required configuration — point it at your
@@ -18,7 +18,8 @@ server and wrap your agent.
 
 ## Install
 
-The SDK targets Node 18+ and ships as ESM.
+The SDK targets Node 22+ and ships as ESM with bundled type declarations, so
+it works from plain JavaScript or TypeScript with no extra `@types` package.
 
 ```bash
 npm install keelwave
@@ -28,8 +29,9 @@ pnpm add keelwave
 yarn add keelwave
 ```
 
-The `ai` package (Vercel AI SDK) is a runtime dependency, used by the
-optional model adapter.
+The `ai` package (Vercel AI SDK) is an optional peer dependency, needed only
+for the `keelwave/vercel-ai` model adapter. Core tracing never imports it.
+Both `ai` v4 and v5 are supported.
 
 You also need a running keelwave server to receive the data — see
 [github.com/keelwave/keelwave](https://github.com/keelwave/keelwave). The
