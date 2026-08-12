@@ -1,16 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Keelwave } from '../src/index.js'
 import { wrapModel } from '../src/adapters/vercel-ai.js'
-import type { LanguageModelV1 } from 'ai'
+
+// The stub is deliberately v4-shaped (specificationVersion v1, promptTokens):
+// it is what proves the adapter still reads v4 payloads.
+type StubModel = Parameters<typeof wrapModel>[1]
 
 const ENDPOINT = process.env.KEELWAVE_ENDPOINT ?? 'http://localhost:8080'
 const API_KEY = process.env.KEELWAVE_API_KEY ?? 'kw_test'
 
 // ingestAi is spied on, so these adapter tests never touch a real server.
 
-function makeStubModel(
-  overrides: Partial<LanguageModelV1> = {},
-): LanguageModelV1 {
+function makeStubModel(overrides: Record<string, unknown> = {}): StubModel {
   return {
     specificationVersion: 'v1',
     provider: 'stub-provider',
@@ -40,7 +41,7 @@ function makeStubModel(
       return { stream, rawCall: { rawPrompt: null, rawSettings: {} } }
     },
     ...overrides,
-  }
+  } as unknown as StubModel
 }
 
 describe('wrapModel — generateText tracing', () => {
@@ -49,13 +50,17 @@ describe('wrapModel — generateText tracing', () => {
     const model = wrapModel(client, makeStubModel())
 
     const result = await model.doGenerate({
-      inputFormat: 'messages',
-      mode: { type: 'regular' },
       prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }],
     })
 
-    expect(result.text).toBe('hello world')
-    expect(result.usage.promptTokens).toBe(10)
+    // Asserted against the v4 shape the stub returned: the adapter must hand
+    // the provider's own payload back untouched.
+    const passthrough = result as unknown as {
+      text: string
+      usage: { promptTokens: number }
+    }
+    expect(passthrough.text).toBe('hello world')
+    expect(passthrough.usage.promptTokens).toBe(10)
   })
 
   it('emits ai_trace with correct token counts', async () => {
@@ -72,8 +77,6 @@ describe('wrapModel — generateText tracing', () => {
     })
 
     await model.doGenerate({
-      inputFormat: 'messages',
-      mode: { type: 'regular' },
       prompt: [],
     })
 
@@ -102,8 +105,6 @@ describe('wrapModel — generateText tracing', () => {
 
     await expect(
       model.doGenerate({
-        inputFormat: 'messages',
-        mode: { type: 'regular' },
         prompt: [],
       }),
     ).rejects.toThrow('model exploded')
@@ -122,8 +123,6 @@ describe('wrapModel — generateText tracing', () => {
 
     await client.run('ai-sdk-agent', async (run) => {
       await model.doGenerate({
-        inputFormat: 'messages',
-        mode: { type: 'regular' },
         prompt: [],
       })
       await new Promise((r) => setTimeout(r, 50))
@@ -141,8 +140,6 @@ describe('wrapModel — stream tracing', () => {
     const model = wrapModel(client, makeStubModel())
 
     const { stream } = await model.doStream({
-      inputFormat: 'messages',
-      mode: { type: 'regular' },
       prompt: [],
     })
 

@@ -15,8 +15,33 @@
 
 import { wrapLanguageModel } from 'ai'
 import { getCurrentRun } from '../run.js'
-import type { LanguageModelV1, LanguageModelV1Middleware } from 'ai'
 import type { Keelwave } from '../client.js'
+
+// Derived from the installed SDK rather than imported by name: v4 calls the
+// model type LanguageModelV1, v5 calls it LanguageModelV2, and neither name
+// resolves against the other major.
+type WrapArgs = Parameters<typeof wrapLanguageModel>[0]
+type WrappedModel = WrapArgs['model']
+type Middleware = Exclude<WrapArgs['middleware'], ReadonlyArray<unknown>>
+
+// v4 reports promptTokens/completionTokens, v5 inputTokens/outputTokens.
+type AnyUsage = {
+  inputTokens?: number
+  outputTokens?: number
+  promptTokens?: number
+  completionTokens?: number
+}
+
+function readUsage(usage: unknown): {
+  inputTokens?: number
+  outputTokens?: number
+} {
+  const u = usage as AnyUsage | undefined
+  return {
+    inputTokens: u?.inputTokens ?? u?.promptTokens,
+    outputTokens: u?.outputTokens ?? u?.completionTokens,
+  }
+}
 
 export interface WrapModelOptions {
   /** Override the model label stored in ai_traces (default: model.modelId). */
@@ -33,16 +58,16 @@ export interface WrapModelOptions {
  */
 export function wrapModel(
   keelwave: Keelwave,
-  model: LanguageModelV1,
+  model: WrappedModel,
   opts: WrapModelOptions = {},
-): LanguageModelV1 {
+): WrappedModel {
   const modelLabel = opts.model ?? model.modelId
   const providerLabel = opts.provider ?? model.provider
 
-  const middleware: LanguageModelV1Middleware = {
+  const middleware: Middleware = {
     wrapGenerate: async ({ doGenerate }) => {
       const t0 = Date.now()
-      let result: Awaited<ReturnType<LanguageModelV1['doGenerate']>> | undefined
+      let result: Awaited<ReturnType<WrappedModel['doGenerate']>> | undefined
       let status: 'success' | 'error' = 'success'
       let errorMessage: string | undefined
 
@@ -56,9 +81,7 @@ export function wrapModel(
       } finally {
         const latencyMs = Date.now() - t0
         const run = getCurrentRun()
-        const usage = result?.usage as
-          | { promptTokens?: number; completionTokens?: number }
-          | undefined
+        const usage = readUsage(result?.usage)
 
         keelwave
           .ingestAi({
@@ -66,8 +89,8 @@ export function wrapModel(
             provider: providerLabel,
             status,
             latencyMs,
-            inputTokens: usage?.promptTokens,
-            outputTokens: usage?.completionTokens,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
             errorMessage,
             agentRunId: run?.id,
           })
@@ -88,12 +111,12 @@ export function wrapModel(
       const originalStream = streamResult.stream
       const transformedStream = new TransformStream<
         Awaited<
-          ReturnType<LanguageModelV1['doStream']>
+          ReturnType<WrappedModel['doStream']>
         >['stream'] extends ReadableStream<infer T>
           ? T
           : never,
         Awaited<
-          ReturnType<LanguageModelV1['doStream']>
+          ReturnType<WrappedModel['doStream']>
         >['stream'] extends ReadableStream<infer T>
           ? T
           : never
@@ -104,11 +127,9 @@ export function wrapModel(
           // pick up usage from finish chunk
           const c = chunk as Record<string, unknown>
           if (c.type === 'finish') {
-            const u = c.usage as
-              | { promptTokens?: number; completionTokens?: number }
-              | undefined
-            promptTokens = u?.promptTokens ?? 0
-            completionTokens = u?.completionTokens ?? 0
+            const u = readUsage(c.usage)
+            promptTokens = u.inputTokens ?? 0
+            completionTokens = u.outputTokens ?? 0
             finishEmitted = true
           } else if (c.type === 'error') {
             status = 'error'

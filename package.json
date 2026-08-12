@@ -58,7 +58,7 @@
     "format:check": "prettier --check ."
   },
   "peerDependencies": {
-    "ai": "^5.0.52"
+    "ai": "^4.3.19 || ^5.0.0"
   },
   "peerDependenciesMeta": {
     "ai": {
@@ -66,15 +66,15 @@
     }
   },
   "devDependencies": {
-    "ai": "^5.0.52",
     "@tanstack/eslint-config": "^0.4.0",
-    "@types/node": "^24.0.1",
-    "eslint": "^10.5.0",
+    "@types/node": "^24.13.3",
+    "ai": "^5.0.233",
+    "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.6.0",
-    "prettier": "^3.8.4",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "globals": "^17.10.0",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=18"
