@@ -8,6 +8,14 @@ export interface StepOptions {
   metadata?: Record<string, unknown>
 }
 
+export type TerminationReason =
+  | 'clean'
+  | 'max_steps_reached'
+  | 'context_limit'
+  | 'error'
+  | 'loop_detected'
+  | 'timeout'
+
 export interface ToolCallOptions {
   ok?: boolean
   tokens?: number
@@ -26,6 +34,7 @@ export class Run {
   private _output: string | undefined
   private _loopDetected = false
   private _loopStepIndex: number | undefined
+  private _terminationReason: TerminationReason | undefined
   private _seenFingerprints = new Map<string, number>()
   private _tStart: number
 
@@ -134,6 +143,20 @@ export class Run {
     this._output = output
   }
 
+  /**
+   * Record why the run ended. Only the caller knows this — the SDK cannot see
+   * a step budget or a context limit, and a run that looped but recovered is
+   * still a clean finish. Left unset, exit() reports clean, or error if the
+   * body threw.
+   */
+  setTerminationReason(reason: TerminationReason): void {
+    this._terminationReason = reason
+  }
+
+  get terminationReason(): TerminationReason | undefined {
+    return this._terminationReason
+  }
+
   markLoop(stepIndex?: number): void {
     this._loopDetected = true
     if (stepIndex !== undefined) this._loopStepIndex = stepIndex
@@ -222,8 +245,10 @@ export class RunContext {
 
   async exit(error?: unknown): Promise<void> {
     if (!this._run) return
+    const explicit = this._run.terminationReason
     const status = error ? 'failed' : 'completed'
-    const reason = error ? 'error' : 'clean'
+    // A throw outranks anything set earlier; otherwise honour the caller.
+    const reason = error ? 'error' : (explicit ?? 'clean')
     await this._run.finish(status, reason)
   }
 }
