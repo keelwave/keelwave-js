@@ -162,3 +162,65 @@ describe('wrapModel — stream tracing', () => {
     expect(call.outputTokens).toBe(10)
   })
 })
+
+describe('wrapModel — reasoning steps', () => {
+  it('emits a think step for v4 reasoning and none without it', async () => {
+    const client = new Keelwave({ apiKey: API_KEY, endpoint: ENDPOINT })
+
+    const withReasoning = wrapModel(
+      client,
+      makeStubModel({
+        doGenerate: async () => ({
+          text: 'answer',
+          reasoning: 'let me think',
+          finishReason: 'stop',
+          usage: { promptTokens: 3, completionTokens: 4 },
+          rawCall: { rawPrompt: null, rawSettings: {} },
+          warnings: [],
+        }),
+      }),
+    )
+    const plain = wrapModel(client, makeStubModel())
+
+    await client.run('reasoning-agent', async (run) => {
+      const stepSpy = vi.spyOn(run, 'step')
+
+      await withReasoning.doGenerate({ prompt: [] })
+      await new Promise((r) => setTimeout(r, 30))
+      expect(stepSpy).toHaveBeenCalledWith(
+        'think',
+        'let me think',
+        expect.anything(),
+      )
+
+      // v5 shape: reasoning arrives as a content part, not a string.
+      stepSpy.mockClear()
+      const v5 = wrapModel(
+        client,
+        makeStubModel({
+          doGenerate: async () => ({
+            content: [
+              { type: 'reasoning', text: 'v5 thought' },
+              { type: 'text', text: 'answer' },
+            ],
+            finishReason: 'stop',
+            usage: { inputTokens: 3, outputTokens: 4 },
+            warnings: [],
+          }),
+        }),
+      )
+      await v5.doGenerate({ prompt: [] })
+      await new Promise((r) => setTimeout(r, 30))
+      expect(stepSpy).toHaveBeenCalledWith(
+        'think',
+        'v5 thought',
+        expect.anything(),
+      )
+
+      stepSpy.mockClear()
+      await plain.doGenerate({ prompt: [] })
+      await new Promise((r) => setTimeout(r, 30))
+      expect(stepSpy).not.toHaveBeenCalled()
+    })
+  })
+})

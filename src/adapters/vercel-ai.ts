@@ -32,6 +32,23 @@ type AnyUsage = {
   completionTokens?: number
 }
 
+// Reasoning models (o1/o3, DeepSeek R1) expose chain-of-thought: v4 as a
+// string on the result, v5 as a content part. The python adapters emit a
+// `think` step for it, so this one has to as well or the same agent traced in
+// two languages reports a different step count.
+function readReasoning(result: unknown): string | undefined {
+  const r = result as
+    | { reasoning?: unknown; content?: Array<{ type?: string; text?: string }> }
+    | undefined
+  if (typeof r?.reasoning === 'string' && r.reasoning) return r.reasoning
+  const parts = r && Array.isArray(r.content)
+    ? r.content
+        .filter((p) => p.type === 'reasoning' && typeof p.text === 'string')
+        .map((p) => p.text as string)
+    : []
+  return parts.length ? parts.join('\n') : undefined
+}
+
 function readUsage(usage: unknown): {
   inputTokens?: number
   outputTokens?: number
@@ -82,6 +99,13 @@ export function wrapModel(
         const latencyMs = Date.now() - t0
         const run = getCurrentRun()
         const usage = readUsage(result?.usage)
+
+        const reasoning = readReasoning(result)
+        if (run && reasoning) {
+          const tokens =
+            (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0) || undefined
+          run.step('think', reasoning, { tokens }).catch(() => {})
+        }
 
         keelwave
           .ingestAi({
