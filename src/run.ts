@@ -90,10 +90,13 @@ export class Run {
     if (opts.tokens) this._totalTokens += opts.tokens
     if (opts.costUsd) this._totalCostUsd += opts.costUsd
 
+    // tool_output is jsonb, so arrays and primitives round-trip as themselves.
+    // Stringifying an array here loses the whole payload — a search returning
+    // [{title,url}] used to land as "[object Object]".
     const toolOutput =
-      output !== null && typeof output === 'object' && !Array.isArray(output)
-        ? (output as Record<string, unknown>)
-        : { value: String(output) }
+      output !== null && output !== undefined && typeof output === 'object'
+        ? (output as Record<string, unknown> | unknown[])
+        : { value: output ?? null }
 
     try {
       await request(
