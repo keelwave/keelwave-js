@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { Keelwave } from '../src/index.js'
 
 const ENDPOINT = process.env.KEELWAVE_ENDPOINT ?? 'http://localhost:8080'
@@ -34,6 +34,42 @@ describe('@observe', () => {
     const c = makeClient()
     const fn = c.observe({ name: 'triple' })((x: number) => x * 3)
     expect(await fn(7)).toBe(21)
+  })
+
+  it('tool that throws emits ok:false', async () => {
+    const c = makeClient()
+    const broken = c.observe({ name: 'broken', stepType: 'tool_call' })(
+      (q: string): string => {
+        throw new Error('boom')
+      },
+    )
+
+    let spy: ReturnType<typeof vi.spyOn> | undefined
+    await c.run('fail-agent', async (run) => {
+      spy = vi.spyOn(run, 'toolCall')
+      expect(() => broken('x')).toThrow('boom')
+      await new Promise((r) => setTimeout(r, 50))
+    })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy!.mock.calls[0][3]).toMatchObject({ ok: false })
+  })
+
+  it('tool that returns emits ok:true', async () => {
+    const c = makeClient()
+    const fine = c.observe({ name: 'fine', stepType: 'tool_call' })(
+      (q: string) => ({ results: [q] }),
+    )
+
+    let spy: ReturnType<typeof vi.spyOn> | undefined
+    await c.run('ok-agent', async (run) => {
+      spy = vi.spyOn(run, 'toolCall')
+      expect(fine('x')).toEqual({ results: ['x'] })
+      await new Promise((r) => setTimeout(r, 50))
+    })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy!.mock.calls[0][3]).toMatchObject({ ok: true })
   })
 
   it('is fail-soft: does not crash on server down', () => {

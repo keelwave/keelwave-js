@@ -91,6 +91,34 @@ describe('client config', () => {
   })
 })
 
+describe('toolCall wire serialization', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('serializes tool_success from ok and defaults true', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () =>
+        new Response(
+          JSON.stringify({ data: { id: 'r1', timestamp: '2026-01-01T00:00:00Z' } }),
+          { status: 201, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+
+    const c = new Keelwave({ apiKey: 'kw_test' })
+    await c.run('wire-agent', async (run) => {
+      await run.toolCall('t1', { q: 1 }, {}, { ok: false })
+      await run.toolCall('t2', { q: 2 }, {})
+    })
+
+    const stepBodies = fetchSpy.mock.calls
+      .filter(([url]) => String(url).includes('/agent/steps'))
+      .map(([, init]) => JSON.parse((init as RequestInit).body as string))
+    expect(stepBodies).toHaveLength(2)
+    expect(stepBodies[0].tool_success).toBe(false)
+    expect(stepBodies[1].tool_success).toBe(true)
+  })
+})
+
 describe('request error mapping', () => {
   afterEach(() => vi.restoreAllMocks())
 
