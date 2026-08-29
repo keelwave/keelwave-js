@@ -24,7 +24,9 @@ jobs:
 
   publish-npm:
     needs: build
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # npm provenance requires a github-hosted runner; self-hosted (blacksmith)
+    # runners are rejected by the registry with E422.
+    runs-on: ubuntu-latest
     permissions:
       # Mandatory for npm trusted publishing.
       id-token: write
