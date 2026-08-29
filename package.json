@@ -1,6 +1,6 @@
 {
   "name": "keelwave",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "JavaScript and TypeScript SDK for keelwave — observability and alerting for AI agents.",
   "author": "keelwave <developers@keelwave.com>",
   "license": "MIT",
