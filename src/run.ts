@@ -95,7 +95,7 @@ export class Run {
     // [{title,url}] used to land as "[object Object]".
     const toolOutput =
       output !== null && output !== undefined && typeof output === 'object'
-        ? (output as Record<string, unknown> | unknown[])
+        ? (output as Record<string, unknown> | Array<unknown>)
         : { value: output ?? null }
 
     try {
